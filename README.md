@@ -2,7 +2,7 @@
 
 One canonical, governed answer for every business metric, served to AI assistants over the Model Context Protocol.
 
-This repository is documentation. It explains the problem the system solves, how it is built, and the decisions that shaped it. The running server and the metric definitions it serves are private, and nothing here is derived from them. See [Why the implementation stays private](#why-the-implementation-stays-private).
+This repository explains the problem the system solves, how it is built and the decisions that shaped it, and includes a working reference implementation of that design. The production server and the metric definitions it serves stay private. The code here implements the same architecture for an invented two-unit business, and contains none of the production definitions, data, identities or configuration. See [What stays private](#what-stays-private).
 
 ---
 
@@ -79,6 +79,47 @@ The full set is in [docs/decisions/](docs/decisions/). These are the eight that 
 
 **A stale feed must raise an alarm, never return zero.** An empty result is indistinguishable from a true zero once it is formatted, so freshness is checked and a stale answer is refused rather than rendered. ([ADR 0010](docs/decisions/0010-freshness-over-silent-zeros.md))
 
+## Try it
+
+The reference implementation needs Python 3.10 or later. The test suite runs against a fake warehouse, so it needs no database.
+
+```bash
+python -m venv .venv && .venv/bin/pip install -e '.[dev]'
+.venv/bin/pytest                                  # unit, definition and guard-regression tests
+.venv/bin/python scripts/validate_knowledge.py    # the knowledge and policy validators
+```
+
+To ask it real questions, start the synthetic warehouse. Each unit gets its own read-only role, so the cross-unit boundary is enforced by PostgreSQL, not only by the server:
+
+```bash
+cp examples/warehouse/.env.example examples/warehouse/.env      # choose your own passwords
+docker compose -f examples/warehouse/docker-compose.yml --env-file examples/warehouse/.env up -d
+cp .env.example .env                                            # put the unit passwords in the DSNs
+```
+
+Then register the server with an MCP client over stdio. Locally, the caller is `GM_LOCAL_USER` and the example policy still applies to it:
+
+```json
+{
+  "mcpServers": {
+    "governed-metrics": {
+      "command": "/path/to/governed-metrics-mcp/.venv/bin/governed-metrics",
+      "env": {
+        "GM_KNOWLEDGE_PATH": "/path/to/governed-metrics-mcp/examples/knowledge",
+        "GM_POLICY_PATH": "/path/to/governed-metrics-mcp/examples/access.yaml",
+        "GM_LOCAL_USER": "lead@example.com",
+        "GM_DSN_UNIT_A": "postgresql://gm_unit_a_ro:<password>@127.0.0.1:55432/governed_demo",
+        "GM_DSN_UNIT_B": "postgresql://gm_unit_b_ro:<password>@127.0.0.1:55432/governed_demo"
+      }
+    }
+  }
+}
+```
+
+Things worth asking: revenue for last month in each unit (`get_composite_metric`, where the units name the measure differently and an alias reconciles them); the refund rate for a recent month (still maturing); the marketplace refund rate (refused, because its feed stopped ten days ago); and an ad-hoc query that tries to read the other unit or rename `customer_email`. Switch `GM_LOCAL_USER` to `analyst@example.com` or `partner@example.com` to watch the same questions narrow or get refused.
+
+Over HTTP the server runs as an OAuth resource server behind a TLS-terminating proxy, and it refuses to start without token verification. [docs/reference.md](docs/reference.md) maps every component in these documents to its module and lists the tools, the error vocabulary and the definition format.
+
 ## What is in this repository
 
 ```
@@ -94,18 +135,29 @@ docs/
   lessons-learned.md          what broke, why, and the guard that prevents it
   roadmap.md                  what is next and what was deliberately deferred
   glossary.md                 terms used throughout
+  reference.md                the reference implementation: component map, tools, formats
   decisions/                  numbered decision records
-LICENSE                       Creative Commons Attribution 4.0
+src/governed_metrics/         the MCP server
+  adhoc/                      lexer, reference parser, personal-data guard
+  engine/                     compiler, executor, freshness, cache
+  knowledge/                  definition model, loader, validators
+tests/                        unit, definition, guard-regression and integration tests
+examples/
+  knowledge/                  a synthetic, validated knowledge layer
+  access.yaml                 an example deny-by-default policy
+  warehouse/                  a local PostgreSQL with per-unit read-only roles
+scripts/                      validators, docs generator, overlay reconciliation, deploy pipeline
+deploy/                       systemd unit and reverse-proxy example
+LICENSE                       Creative Commons Attribution 4.0 (documentation)
+LICENSE-CODE                  MIT (code)
 ```
 
-There are no source folders and no placeholder code files. That is deliberate, not unfinished.
+## What stays private
 
-## Why the implementation stays private
+The production server is built for one organisation, and its metric definitions encode that organisation's rules. Publishing the definitions would publish the business. What transfers between organisations is the architecture, the reasoning and the mechanisms that enforce them, so those are what is here: the guard, the policy and overlay, the masking chokepoint, freshness, maturity and provenance, and the delivery pipeline. The example knowledge they run against is invented.
 
-The server is built for one organisation, and its metric definitions encode that organisation's rules. Publishing the definitions would publish the business; publishing the server without them would be a shell that demonstrates nothing. What transfers between organisations is the architecture and the reasoning, so that is what is here.
-
-The engineering problems were general even where the data was not: a guard that disagreed with the parser underneath it, a filter shape that quietly disabled parallel execution, a fail-closed fix that broke valid queries, a deploy that crash-looped on a runtime version mismatch. Those are written up in [lessons-learned.md](docs/lessons-learned.md) in the form most useful to someone building a similar system.
+The engineering problems were general even where the data was not: a guard that disagreed with the parser underneath it, a filter shape that quietly disabled parallel execution, a fail-closed fix that broke valid queries, a deploy that crash-looped on a runtime version mismatch. Those are written up in [lessons-learned.md](docs/lessons-learned.md) in the form most useful to someone building a similar system. The reference implementation guards each one with a regression test or, for the runtime mismatch, a pipeline check.
 
 ## License
 
-Documentation in this repository is licensed under [Creative Commons Attribution 4.0](LICENSE).
+Documentation is licensed under [Creative Commons Attribution 4.0](LICENSE). Code is licensed under the [MIT License](LICENSE-CODE).

@@ -4,3 +4,20 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local configuration and state. Secrets never live in the repository.
+.env
+examples/warehouse/.env
+.deploy.lock/

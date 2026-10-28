@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "governed-metrics-mcp"
+version = "0.1.0"
+description = "A deterministic MCP server that serves governed, canonical business metrics to AI assistants."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT (code); CC-BY-4.0 (documentation)" }
+authors = [{ name = "The governed-metrics-mcp authors" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+# Runtime dependencies are deliberately few. No model SDK appears here, on purpose: no
+# language model runs inside the server (docs/decisions/0001-deterministic-server.md).
+dependencies = [
+    "mcp>=1.27,<2",
+    "psycopg[binary,pool]>=3.1",
+    "pyyaml>=6.0",
+    "pyjwt[crypto]>=2.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "bandit>=1.7",
+]
+
+[project.scripts]
+governed-metrics = "governed_metrics.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: needs a live warehouse (see examples/warehouse); skipped unless GM_TEST_DSN_UNIT_A is set",
+]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["governed_metrics"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = [
+    "S608",   # string-built SQL: every fragment comes from validated definitions; see engine/compiler.py
+    "RUF001", "RUF002", "RUF003",  # typographic punctuation in prose strings is intentional
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S104", "S105", "S106", "S108", "S311", "S603", "E501"]
+"src/governed_metrics/admin.py" = ["E501"]  # the stylesheet and page template are literals
+"scripts/**" = ["S603", "S607"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B608"]  # same reason as ruff S608

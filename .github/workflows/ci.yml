@@ -1,0 +1,87 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: lint and security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e '.[dev]'
+      - run: ruff check src tests scripts
+      - run: bandit -q -c pyproject.toml -r src
+      - name: Validate knowledge and policy
+        run: python scripts/validate_knowledge.py
+      - name: Generated docs match the source
+        run: python scripts/gen_docs.py --check
+
+  test:
+    name: tests on Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest supported runtime is tested, not assumed (lessons-learned.md:
+        # "A deploy that crash-looped on a runtime version mismatch").
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[dev]'
+      - run: pytest --cov --cov-report=term-missing
+
+  integration:
+    name: integration against PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: governed_demo
+          POSTGRES_USER: gm_owner
+          POSTGRES_PASSWORD: ci-owner-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U gm_owner -d governed_demo"
+          --health-interval 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGUSER: gm_owner
+      PGPASSWORD: ci-owner-only
+      PGDATABASE: governed_demo
+      POSTGRES_USER: gm_owner
+      POSTGRES_DB: governed_demo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e '.[dev]'
+      - name: Build the demo warehouse
+        run: |
+          # Throwaway per-run passwords for a container that lives only for this job.
+          export GM_UNIT_A_PASSWORD="$(openssl rand -hex 16)" GM_UNIT_B_PASSWORD="$(openssl rand -hex 16)"
+          echo "::add-mask::$GM_UNIT_A_PASSWORD"
+          echo "::add-mask::$GM_UNIT_B_PASSWORD"
+          psql -v ON_ERROR_STOP=1 -f examples/warehouse/init/01-schema.sql
+          psql -v ON_ERROR_STOP=1 -f examples/warehouse/init/02-seed.sql
+          sh examples/warehouse/init/03-roles.sh
+          echo "GM_TEST_DSN_UNIT_A=postgresql://gm_unit_a_ro:$GM_UNIT_A_PASSWORD@127.0.0.1:5432/governed_demo" >> "$GITHUB_ENV"
+          echo "GM_TEST_DSN_UNIT_B=postgresql://gm_unit_b_ro:$GM_UNIT_B_PASSWORD@127.0.0.1:5432/governed_demo" >> "$GITHUB_ENV"
+      - run: pytest tests/integration -m integration -v

@@ -1,0 +1,53 @@
+# Example reverse proxy: the only public listener. Adapt the host name and the SSO helper.
+#
+# * /mcp is passed through: the server verifies the identity provider's bearer token itself.
+# * /admin sits behind single sign-on at the proxy (oauth2-proxy on :4180 here). The proxy
+#   forwards the verified identity and the shared secret that proves the request came
+#   through it. Client-supplied copies of both headers are stripped first, so a caller can
+#   never present its own.
+# * Everything else, /readyz included, is not exposed.
+{
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+metrics.example.com {
+	request_header -X-Proxy-Secret
+	request_header -X-Forwarded-Email
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+
+	@mcp path /mcp /mcp/* /.well-known/oauth-protected-resource*
+	handle @mcp {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	handle /healthz {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	handle /oauth2/* {
+		reverse_proxy 127.0.0.1:4180
+	}
+
+	handle /admin* {
+		route {
+			forward_auth 127.0.0.1:4180 {
+				uri /oauth2/auth
+				copy_headers X-Auth-Request-Email>X-Forwarded-Email
+			}
+			reverse_proxy 127.0.0.1:8080 {
+				header_up X-Proxy-Secret {env.GM_PROXY_SECRET}
+			}
+		}
+	}
+
+	handle {
+		respond 404
+	}
+}

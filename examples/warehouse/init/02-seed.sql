@@ -44,7 +44,7 @@ FROM (SELECT DISTINCT ON (customer_id) order_id FROM unit_b.orders ORDER BY cust
 WHERE o.order_id = f.order_id;
 
 INSERT INTO unit_a.refunds (refund_id, order_id, refunded_at, amount, reason)
-SELECT row_number() OVER (), o.order_id, r.refunded_at, round(o.gross_amount * (0.3 + random() * 0.7), 2),
+SELECT row_number() OVER (), o.order_id, r.refunded_at, round((o.gross_amount * (0.3 + random() * 0.7))::numeric, 2),
        (ARRAY['damaged', 'late', 'changed_mind'])[1 + floor(random() * 3)::int]
 FROM unit_a.orders o
 CROSS JOIN LATERAL (SELECT o.ordered_at + random() * interval '30 days' AS refunded_at) r

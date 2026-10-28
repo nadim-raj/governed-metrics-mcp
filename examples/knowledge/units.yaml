@@ -1,0 +1,34 @@
+# Units and the sources each one may read. A source belongs to exactly one unit, and a
+# definition may read only its own unit's sources; the warehouse roles mirror this
+# (examples/warehouse/init/03-roles.sh).
+#
+# Everything in examples/ is synthetic: a fictional two-unit store, invented to exercise
+# the framework. It describes no real organisation.
+units:
+  unit_a:
+    description: Direct online store (fictional).
+    sources:
+      unit_a.orders:
+        description: One row per order placed in the direct store.
+        freshness: {column: ordered_at, max_age_days: 3, lag_days: 1}
+        personal_columns: [customer_email]
+      unit_a.refunds:
+        description: One row per refund issued against a direct-store order.
+        freshness: {column: refunded_at, max_age_days: 3, lag_days: 1}
+        # Refunds arrive up to 30 days after the order they belong to, so any value
+        # anchored on the order date keeps moving for 30 days after its window closes.
+        late_arriving_days: 30
+      unit_a.products:
+        description: The current product catalogue, one row per product.
+
+  unit_b:
+    description: Marketplace storefront (fictional).
+    sources:
+      unit_b.orders:
+        description: One row per order placed through the marketplace.
+        freshness: {column: ordered_at, max_age_days: 3, lag_days: 1}
+        personal_columns: [customer_email]
+      unit_b.refunds:
+        description: One row per refund issued against a marketplace order.
+        freshness: {column: refunded_at, max_age_days: 3, lag_days: 1}
+        late_arriving_days: 30

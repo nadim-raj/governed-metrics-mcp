@@ -1,0 +1,13 @@
+key: active_products
+description: Products currently listed for sale. A point-in-time value, not a flow over a period.
+owner: catalogue-team
+version: 1
+effective: 2026-01-05
+units:
+  unit_a:
+    source: unit_a.products
+    alias: p
+    snapshot: true
+    base_filter: p.is_active
+    measures:
+      count: {sql: "COUNT(*)", additive: true}

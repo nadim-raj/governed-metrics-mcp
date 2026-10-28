@@ -1,0 +1,40 @@
+key: orders
+description: Countable orders placed in the period.
+owner: commerce-analytics
+version: 2
+effective: 2026-01-05
+units:
+  unit_a:
+    source: unit_a.orders
+    alias: o
+    period_column: o.ordered_at
+    base_filter: "{{ countable_order(o) }}"
+    measures:
+      count: {sql: "COUNT(*)", additive: true}
+      customers: {sql: "COUNT(DISTINCT o.customer_id)", additive: false}
+    default_measure: count
+    dimensions:
+      channel: {sql: o.channel}
+      country: {sql: o.country}
+      status: {sql: o.status}
+      customer_email: {sql: o.customer_email, personal: true}
+    presets:
+      paid: {sql: "o.status = 'paid'", description: Paid orders only.}
+      first_orders: {sql: o.is_first_order, description: Each customer's first order.}
+  unit_b:
+    source: unit_b.orders
+    alias: o
+    period_column: o.ordered_at
+    base_filter: "{{ countable_order(o) }}"
+    measures:
+      count: {sql: "COUNT(*)", additive: true}
+      customers: {sql: "COUNT(DISTINCT o.customer_id)", additive: false}
+    default_measure: count
+    dimensions:
+      channel: {sql: o.channel}
+      country: {sql: o.country}
+      status: {sql: o.status}
+      customer_email: {sql: o.customer_email, personal: true}
+    presets:
+      paid: {sql: "o.status = 'paid'", description: Paid orders only.}
+      first_orders: {sql: o.is_first_order, description: Each customer's first order.}

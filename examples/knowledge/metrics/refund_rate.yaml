@@ -1,0 +1,34 @@
+key: refund_rate
+kind: derived
+description: Refunds on the orders placed in the period, as a share of those orders.
+owner: commerce-analytics
+version: 1
+effective: 2026-02-01
+units:
+  unit_a:
+    op: ratio
+    # Two defensible forms, so two named variants rather than one default somebody chose.
+    default_variant: by_value
+    variants:
+      by_value:
+        numerator: {metric: refunds, measure: amount}
+        denominator: {metric: revenue, measure: gross}
+      by_count:
+        numerator: {metric: refunds, measure: count}
+        denominator: {metric: orders, measure: count, preset: paid}
+    maturity:
+      settles_after_days: 30
+      note: The numerator keeps rising for 30 days after the period closes.
+  unit_b:
+    op: ratio
+    default_variant: by_value
+    variants:
+      by_value:
+        numerator: {metric: refunds, measure: amount}
+        denominator: {metric: revenue, measure: gross}
+      by_count:
+        numerator: {metric: refunds, measure: count}
+        denominator: {metric: orders, measure: count, preset: paid}
+    maturity:
+      settles_after_days: 30
+      note: The numerator keeps rising for 30 days after the period closes.

@@ -1,0 +1,7 @@
+terms:
+  countable order: An order that is neither a test order nor an internal order. Every order metric counts only countable orders.
+  gross revenue: The value of paid countable orders before discounts.
+  net revenue: Gross revenue minus discounts. The default revenue measure.
+  refund rate: Refunds on the orders placed in a period, as a share of those orders. Still maturing for 30 days after the period closes.
+  half-open window: A period that includes its start date and excludes its end date, so adjacent periods never count the same record twice.
+  composite: One metric across every unit the caller can read, with each unit's share and a total when the measure is additive.

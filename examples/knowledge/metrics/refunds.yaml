@@ -1,0 +1,40 @@
+key: refunds
+description: Refunds issued against countable orders placed in the period (anchored on the order date).
+owner: commerce-analytics
+version: 1
+effective: 2026-02-01
+units:
+  unit_a:
+    source: unit_a.refunds
+    alias: r
+    joins:
+      - {source: unit_a.orders, alias: o, condition: "o.order_id = r.order_id"}
+    period_column: o.ordered_at
+    base_filter: "{{ countable_order(o) }}"
+    measures:
+      amount: {sql: "SUM(r.amount)", additive: true}
+      count: {sql: "COUNT(*)", additive: true}
+    default_measure: amount
+    dimensions:
+      channel: {sql: o.channel}
+      reason: {sql: r.reason}
+    maturity:
+      settles_after_days: 30
+      note: Refunds arrive up to 30 days after the order, so a recent period's value is still rising.
+  unit_b:
+    source: unit_b.refunds
+    alias: r
+    joins:
+      - {source: unit_b.orders, alias: o, condition: "o.order_id = r.order_id"}
+    period_column: o.ordered_at
+    base_filter: "{{ countable_order(o) }}"
+    measures:
+      amount: {sql: "SUM(r.amount)", additive: true}
+      count: {sql: "COUNT(*)", additive: true}
+    default_measure: amount
+    dimensions:
+      channel: {sql: o.channel}
+      reason: {sql: r.reason}
+    maturity:
+      settles_after_days: 30
+      note: Refunds arrive up to 30 days after the order, so a recent period's value is still rising.

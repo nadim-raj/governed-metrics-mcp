@@ -1,0 +1,21 @@
+# Local demo warehouse. Listens on loopback only.
+#
+#   cp examples/warehouse/.env.example examples/warehouse/.env    # then set the passwords
+#   docker compose -f examples/warehouse/docker-compose.yml --env-file examples/warehouse/.env up -d
+services:
+  warehouse:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: governed_demo
+      POSTGRES_USER: gm_owner
+      POSTGRES_PASSWORD: ${GM_OWNER_PASSWORD:?set GM_OWNER_PASSWORD in examples/warehouse/.env}
+      GM_UNIT_A_PASSWORD: ${GM_UNIT_A_PASSWORD:?set GM_UNIT_A_PASSWORD in examples/warehouse/.env}
+      GM_UNIT_B_PASSWORD: ${GM_UNIT_B_PASSWORD:?set GM_UNIT_B_PASSWORD in examples/warehouse/.env}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gm_owner -d governed_demo"]
+      interval: 5s
+      retries: 10

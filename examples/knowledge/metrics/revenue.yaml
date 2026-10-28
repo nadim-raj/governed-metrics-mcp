@@ -1,0 +1,39 @@
+key: revenue
+description: Value of paid countable orders placed in the period.
+owner: commerce-analytics
+version: 3
+effective: 2026-02-01
+units:
+  unit_a:
+    source: unit_a.orders
+    alias: o
+    period_column: o.ordered_at
+    base_filter: "{{ countable_order(o) }} AND o.status = 'paid'"
+    measures:
+      gross: {sql: "SUM(o.gross_amount)", additive: true}
+      net: {sql: "SUM(o.gross_amount - o.discount_amount)", additive: true}
+      average_order_value: {sql: "AVG(o.gross_amount - o.discount_amount)", additive: false}
+    default_measure: net
+    dimensions:
+      channel: {sql: o.channel}
+      country: {sql: o.country}
+    presets:
+      first_orders: {sql: o.is_first_order, description: Revenue from each customer's first order.}
+  unit_b:
+    # The marketplace has always called net revenue "net_sales". The alias lets a
+    # cross-unit call ask both units for `net` without renaming anything upstream.
+    source: unit_b.orders
+    alias: o
+    period_column: o.ordered_at
+    base_filter: "{{ countable_order(o) }} AND o.status = 'paid'"
+    measures:
+      gross: {sql: "SUM(o.gross_amount)", additive: true}
+      net_sales: {sql: "SUM(o.gross_amount - o.discount_amount)", additive: true}
+      average_order_value: {sql: "AVG(o.gross_amount - o.discount_amount)", additive: false}
+    default_measure: net_sales
+    measure_aliases: {net: net_sales}
+    dimensions:
+      channel: {sql: o.channel}
+      country: {sql: o.country}
+    presets:
+      first_orders: {sql: o.is_first_order, description: Revenue from each customer's first order.}

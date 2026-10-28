@@ -1,0 +1,17 @@
+domain: shipping
+rules:
+  free_shipping_threshold:
+    description: Basket value, in the store currency, at or above which shipping is free.
+    group_default:
+      - {value: 50, effective: 2025-01-01, verified: true}
+      - {value: 60, effective: 2026-03-01, verified: true, note: Raised after a carrier price change.}
+    overrides:
+      unit_b:
+        - {value: 40, effective: 2025-06-01, verified: true}
+  returns_window_days:
+    description: Days after delivery within which a return is accepted.
+    group_default:
+      - {value: 30, effective: 2025-01-01, verified: true}
+      # A drafted change. Until it is verified, asking about any date on or after its
+      # effective date is refused rather than answered with the older value.
+      - {value: 45, effective: 2026-09-01, verified: false, note: Proposed; awaiting sign-off.}

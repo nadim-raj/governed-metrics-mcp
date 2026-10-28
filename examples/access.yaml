@@ -1,0 +1,39 @@
+# Example access policy. Every identity here is a placeholder on example.com.
+#
+# Deny by default: a caller not listed here can read nothing. There is no default grant.
+admins:
+  # Admin rights manage grants and reload knowledge. They confer no data access: this
+  # identity can read data only if it also has an entry under `users`.
+  - admin@example.com
+
+include:
+  # Machine-maintained by scripts/reconcile_overlay.py: console grants written back into
+  # version control. Included files may hold `users` only, never `admins`.
+  - access.grants.yaml
+
+users:
+  # Canonical metrics for one unit; no ad-hoc querying.
+  analyst@example.com:
+    units: [unit_a]
+
+  # Every unit, plus ad-hoc access. Ad-hoc is granted unit by unit and source by source.
+  lead@example.com:
+    units: ["*"]
+    adhoc:
+      unit_a: ["*"]
+      unit_b: [unit_b.orders]
+
+  # Two metrics only, and revenue may be broken down by channel and nothing else.
+  partner@example.com:
+    units: [unit_a, unit_b]
+    metrics:
+      "*": [orders, revenue]
+    dimensions:
+      revenue: [channel]
+
+  # A data steward who may see personal fields unmasked. A separate, explicit grant.
+  steward@example.com:
+    units: [unit_a]
+    adhoc:
+      unit_a: ["*"]
+    unmasked: true

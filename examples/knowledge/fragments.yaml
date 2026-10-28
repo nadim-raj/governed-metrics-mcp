@@ -1,0 +1,6 @@
+# Shared fragments: a business rule written once and referenced as {{ name(alias) }}.
+# Writing one of these out by hand in a definition is a validation error (ADR 0008).
+fragments:
+  countable_order:
+    description: An order that counts toward business metrics. Test orders and internal orders never count.
+    sql: "{a}.status <> 'test' AND NOT {a}.is_internal"

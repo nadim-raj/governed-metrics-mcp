@@ -46,10 +46,19 @@ try to reconstruct them.
 with maturity.settled=false is still moving.
 """
 
-READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
-ADHOC = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=True)
-ADMIN = ToolAnnotations(readOnlyHint=False, idempotentHint=True, destructiveHint=False,
-                        openWorldHint=False)
+# All four hints are stated on every tool. An omitted hint is not the same as false:
+# a host cannot distinguish "not destructive" from "unstated", so it has to assume the
+# worst and warn about a read. Some directories reject a tool whose hints are incomplete.
+READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                            idempotentHint=True, openWorldHint=False)
+# Ad-hoc reads are still reads, but the caller supplies the statement, so the set of
+# things it may touch is bounded by a grant rather than by a declaration.
+ADHOC = ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                        idempotentHint=True, openWorldHint=True)
+# Reloading changes server state without destroying anything: invalid knowledge is
+# rejected and the version already serving keeps serving.
+ADMIN = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                        idempotentHint=True, openWorldHint=False)
 
 
 def _transport_security(rt: Runtime) -> TransportSecuritySettings:

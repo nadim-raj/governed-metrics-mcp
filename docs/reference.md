@@ -135,7 +135,7 @@ Units and their sources live in `units.yaml`, where a source can declare `freshn
 | `governed_metrics/policy.py` | 256 | The access policy: deny by default, resolved from the verified identity (docs/access-model.md). |
 | `governed_metrics/rules.py` | 78 | Governed rules: layered, effective-dated, served only when verified (ADR 0009). |
 | `governed_metrics/runtime.py` | 129 | The runtime: the knowledge snapshot, the policy, the engine and the audit log, together. |
-| `governed_metrics/server.py` | 204 | MCP wiring: the tool surface, health checks and the admin console on one server. |
+| `governed_metrics/server.py` | 213 | MCP wiring: the tool surface, health checks and the admin console on one server. |
 | `governed_metrics/tools.py` | 404 | Tool bodies, independent of the MCP transport (server.py only wires them up). |
 | `governed_metrics/warehouse.py` | 142 | Warehouse access, one read-only credential per unit (ADR 0006). |
 | `governed_metrics/adhoc/__init__.py` | 1 | The guarded ad-hoc path: lexer, reference parser, personal-data guard. |

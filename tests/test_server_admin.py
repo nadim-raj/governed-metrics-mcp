@@ -31,6 +31,27 @@ def test_tool_surface_and_annotations(rt):
     assert "start" in tools["get_metric"].inputSchema["properties"]
 
 
+HINTS = ("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")
+
+
+def test_every_tool_states_all_four_hints(rt):
+    """An omitted hint reads as unknown, not as false, so a host must assume the worst
+    about a tool that only reads. Every tool states all four explicitly."""
+    for t in anyio.run(build_server(rt).list_tools):
+        stated = {h: getattr(t.annotations, h, None) for h in HINTS}
+        unstated = [h for h, v in stated.items() if not isinstance(v, bool)]
+        assert not unstated, f"{t.name} leaves {unstated} unstated"
+
+
+def test_hints_match_what_the_handlers_actually_do(rt):
+    tools = {t.name: t.annotations for t in anyio.run(build_server(rt).list_tools)}
+    assert tools["run_query"].readOnlyHint is True          # guarded, but still a read
+    assert tools["run_query"].openWorldHint is True         # the caller supplies the statement
+    assert tools["reload_knowledge"].readOnlyHint is False  # it changes server state
+    assert tools["reload_knowledge"].destructiveHint is False
+    assert all(a.destructiveHint is False for a in tools.values())
+
+
 def test_tools_run_through_the_governed_path(rt):
     mcp = build_server(rt)
 
